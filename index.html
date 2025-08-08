@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="12‑Team PPR Mock Draft — Picks 3 & 10" />
+  <title>12‑Team PPR Mock Draft — Picks 3 & 10</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#071226;--card:#0d1622;--muted:#9aa4b2;--accent:#06b6d4;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Inter',system-ui,Arial,sans-serif;background:linear-gradient(180deg,#041026,#071226);color:#e6eef6}
+    header{padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:18px;margin:0}
+    header .meta{color:var(--muted);font-size:13px}
+    .container{max-width:1200px;margin:22px auto;padding:18px}
+    .layout{display:grid;grid-template-columns:1fr 340px;gap:18px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    button{background:var(--accent);border:0;padding:8px 10px;border-radius:8px;color:#042;text-transform:uppercase;font-weight:700;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);text-transform:none}
+    input[type=range]{width:160px}
+    .board{display:grid;gap:6px}
+    .board-row{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+    .slot{background:var(--glass);padding:8px;border-radius:8px;font-size:13px;min-height:56px;display:flex;flex-direction:column;justify-content:center}
+    .slot.empty{opacity:0.45}
+    .slot .team{font-weight:700}
+    #available{max-height:380px;overflow:auto;padding:6px;border-radius:8px;background:rgba(0,0,0,0.12)}
+    .player-row{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;margin-bottom:6px;background:linear-gradient(90deg,rgba(255,255,255,0.01),rgba(255,255,255,0.00))}
+    .player-meta{font-size:13px;color:var(--muted)}
+    .roster{display:flex;flex-direction:column;gap:8px}
+    .roster-card{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px}
+    .log{font-family:monospace;font-size:13px;max-height:220px;overflow:auto;padding:8px;background:rgba(0,0,0,0.18);border-radius:8px}
+    .topbar{display:flex;gap:12px;align-items:center}
+    .search{flex:1}
+    .status-pill{color:var(--muted);font-size:13px}
+    #timer{font-weight:700;color:var(--accent)}
+    @media (max-width:980px){.layout{grid-template-columns:1fr}.board-row{grid-template-columns:repeat(6,1fr)}.card{padding:12px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>12‑Team PPR Mock Draft — You control picks <span id="userSlots">3 &amp; 10</span></h1>
+    <div class="meta" id="status">Status: Ready — using your supplied rankings for top 130</div>
+  </header>
+
+  <div class="container">
+    <div class="layout">
+      <div class="card">
+        <div class="controls">
+          <button id="startBtn">Start Draft</button>
+          <button id="pauseBtn" class="secondary">Pause</button>
+          <button id="resetBtn" class="secondary">Reset</button>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;color:var(--muted)">Speed</label>
+            <input id="speed" type="range" min="200" max="1600" step="100" value="700">
+          </div>
+        </div>
+
+        <div class="topbar" style="margin-bottom:10px">
+          <input id="search" class="search" placeholder="Search players (name / pos / team)" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+          <div class="status-pill">Round <span id="roundNum">0</span> • Pick <span id="pickNum">0</span></div>
+          <div id="timer">Timer: --</div>
+        </div>
+
+        <h3 style="margin:0 0 8px 0">Draft Board</h3>
+        <div id="boardContainer" class="board" style="--rounds:10"></div>
+
+        <h3 style="margin-top:12px">Available Players</h3>
+        <div id="available" aria-live="polite"></div>
+
+      </div>
+
+      <aside class="card">
+        <h3 style="margin-top:0">Your Rosters</h3>
+        <div class="roster">
+          <div class="roster-card">
+            <div style="display:flex;justify-content:space-between;align-items:center"><strong>Team #3 (You)</strong><span class="player-count" id="team3count">0</span></div>
+            <ol id="team3" style="margin:6px 0 0 18px;padding:0"></ol>
+          </div>
+          <div class="roster-card">
+            <div style="display:flex;justify-content:space-between;align-items:center"><strong>Team #10 (You)</strong><span class="player-count" id="team10count">0</span></div>
+            <ol id="team10" style="margin:6px 0 0 18px;padding:0"></ol>
+          </div>
+
+          <div style="margin-top:8px">
+            <h4 style="margin:6px 0">Live Log</h4>
+            <div id="log" class="log" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <footer>
+          <div style="margin-top:8px;color:var(--muted);font-size:13px">Notes: Top 130 teams use your supplied ranking order. Remaining players are auto-filled to avoid running out. Each user pick (teams 3 &amp; 10) has a 30‑second timer before an auto‑pick occurs.</div>
+        </footer>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+  // CONFIG
+  const TEAMS = 12;
+  const ROUNDS = 10;
+  const TOTAL_PICKS = TEAMS * ROUNDS;
+  const USER_SLOTS = [3,10];
+  const USER_PICK_TIMEOUT_MS = 30000; // 30 seconds per your request
+
+  // --- User-supplied ranking (top 130) ---
+  const USER_RANKINGS = [
+    {name:"Ja'Marr Chase", pos:"WR", team:"CIN"},
+    {name:"Bijan Robinson", pos:"RB", team:"ATL"},
+    {name:"Saquon Barkley", pos:"RB", team:"PHI"},
+    {name:"Jahmyr Gibbs", pos:"RB", team:"DET"},
+    {name:"Justin Jefferson", pos:"WR", team:"MIN"},
+    {name:"CeeDee Lamb", pos:"WR", team:"DAL"},
+    {name:"Christian McCaffrey", pos:"RB", team:"SF"},
+    {name:"De'Von Achane", pos:"RB", team:"MIA"},
+    {name:"Puka Nacua", pos:"WR", team:"LAR"},
+    {name:"Malik Nabers", pos:"WR", team:"NYG"},
+    {name:"Derrick Henry", pos:"RB", team:"BAL"},
+    {name:"Ashton Jeanty", pos:"RB", team:"LV"},
+    {name:"Nico Collins", pos:"WR", team:"HOU"},
+    {name:"Amon-Ra St. Brown", pos:"WR", team:"DET"},
+    {name:"Josh Jacobs", pos:"RB", team:"GB"},
+    {name:"Brian Thomas Jr.", pos:"WR", team:"JAX"},
+    {name:"Jonathan Taylor", pos:"RB", team:"IND"},
+    {name:"Bucky Irving", pos:"RB", team:"TB"},
+    {name:"Drake London", pos:"WR", team:"ATL"},
+    {name:"Kyren Williams", pos:"RB", team:"LAR"},
+    {name:"A.J. Brown", pos:"WR", team:"PHI"},
+    {name:"Lamar Jackson", pos:"QB", team:"BAL"},
+    {name:"Tee Higgins", pos:"WR", team:"CIN"},
+    {name:"Chase Brown", pos:"RB", team:"CIN"},
+    {name:"Ladd McConkey", pos:"WR", team:"LAC"},
+    {name:"Josh Allen", pos:"QB", team:"BUF"},
+    {name:"Tyreek Hill", pos:"WR", team:"MIA"},
+    {name:"Alvin Kamara", pos:"RB", team:"NO"},
+    {name:"Davante Adams", pos:"WR", team:"LAR"},
+    {name:"Brock Bowers", pos:"TE", team:"LV"},
+    {name:"Joe Burrow", pos:"QB", team:"CIN"},
+    {name:"Mike Evans", pos:"WR", team:"TB"},
+    {name:"Trey McBride", pos:"TE", team:"ARI"},
+    {name:"Jayden Daniels", pos:"QB", team:"WAS"},
+    {name:"James Cook", pos:"RB", team:"BUF"},
+    {name:"Breece Hall", pos:"RB", team:"NYJ"},
+    {name:"James Conner", pos:"RB", team:"ARI"},
+    {name:"Jaxon Smith-Njigba", pos:"WR", team:"SEA"},
+    {name:"Marvin Harrison Jr.", pos:"WR", team:"ARI"},
+    {name:"Terry McLaurin", pos:"WR", team:"WAS"},
+    {name:"Kenneth Walker III", pos:"RB", team:"SEA"},
+    {name:"Chuba Hubbard", pos:"RB", team:"CAR"},
+    {name:"DJ Moore", pos:"WR", team:"CHI"},
+    {name:"Garrett Wilson", pos:"WR", team:"NYJ"},
+    {name:"Omarion Hampton", pos:"RB", team:"LAC"},
+    {name:"DK Metcalf", pos:"WR", team:"PIT"},
+    {name:"Jalen Hurts", pos:"QB", team:"PHI"},
+    {name:"DeVonta Smith", pos:"WR", team:"PHI"},
+    {name:"Courtland Sutton", pos:"WR", team:"DEN"},
+    {name:"George Kittle", pos:"TE", team:"SF"},
+    {name:"Xavier Worthy", pos:"WR", team:"KC"},
+    {name:"Zay Flowers", pos:"WR", team:"BAL"},
+    {name:"Jerry Jeudy", pos:"WR", team:"CLE"},
+    {name:"Patrick Mahomes", pos:"QB", team:"KC"},
+    {name:"Baker Mayfield", pos:"QB", team:"TB"},
+    {name:"D'Andre Swift", pos:"RB", team:"CHI"},
+    {name:"Jakobi Meyers", pos:"WR", team:"LV"},
+    {name:"George Pickens", pos:"WR", team:"DAL"},
+    {name:"Calvin Ridley", pos:"WR", team:"TEN"},
+    {name:"Jaylen Waddle", pos:"WR", team:"MIA"},
+    {name:"David Montgomery", pos:"RB", team:"DET"},
+    {name:"Aaron Jones", pos:"RB", team:"MIN"},
+    {name:"Tetairoa McMillan", pos:"WR", team:"CAR"},
+    {name:"Jameson Williams", pos:"WR", team:"DET"},
+    {name:"Tony Pollard", pos:"RB", team:"TEN"},
+    {name:"Rashee Rice", pos:"WR", team:"KC"},
+    {name:"Jauan Jennings", pos:"WR", team:"SF"},
+    {name:"Joe Mixon", pos:"RB", team:"HOU"},
+    {name:"Deebo Samuel Sr.", pos:"WR", team:"WAS"},
+    {name:"Chris Godwin", pos:"WR", team:"TB"},
+    {name:"Chris Olave", pos:"WR", team:"NO"},
+    {name:"TreVeyon Henderson", pos:"RB", team:"NE"},
+    {name:"RJ Harvey", pos:"RB", team:"DEN"},
+    {name:"Khalil Shakir", pos:"WR", team:"BUF"},
+    {name:"Isiah Pacheco", pos:"RB", team:"KC"},
+    {name:"Rome Odunze", pos:"WR", team:"CHI"},
+    {name:"Bo Nix", pos:"QB", team:"DEN"},
+    {name:"Stefon Diggs", pos:"WR", team:"NE"},
+    {name:"Brock Purdy", pos:"QB", team:"SF"},
+    {name:"Jayden Reed", pos:"WR", team:"GB"},
+    {name:"Kaleb Johnson", pos:"RB", team:"PIT"},
+    {name:"Sam LaPorta", pos:"TE", team:"DET"},
+    {name:"Matthew Golden", pos:"WR", team:"GB"},
+    {name:"Kyler Murray", pos:"QB", team:"ARI"},
+    {name:"Jaylen Warren", pos:"RB", team:"PIT"},
+    {name:"Cooper Kupp", pos:"WR", team:"SEA"},
+    {name:"Travis Kelce", pos:"TE", team:"KC"},
+    {name:"Brian Robinson Jr.", pos:"RB", team:"WAS"},
+    {name:"Dak Prescott", pos:"QB", team:"DAL"},
+    {name:"Michael Pittman Jr.", pos:"WR", team:"IND"},
+    {name:"Tyrone Tracy Jr.", pos:"RB", team:"NYG"},
+    {name:"Darnell Mooney", pos:"WR", team:"ATL"},
+    {name:"Jordan Addison", pos:"WR", team:"MIN"},
+    {name:"T.J. Hockenson", pos:"TE", team:"MIN"},
+    {name:"Ricky Pearsall", pos:"WR", team:"SF"},
+    {name:"David Njoku", pos:"TE", team:"CLE"},
+    {name:"Josh Downs", pos:"WR", team:"IND"},
+    {name:"Rashid Shaheed", pos:"WR", team:"NO"},
+    {name:"Travis Hunter", pos:"WR", team:"JAX"},
+    {name:"Jared Goff", pos:"QB", team:"DET"},
+    {name:"Dallas Defense", pos:"DEF", team:"DAL"},
+    {name:"Caleb Williams", pos:"QB", team:"CHI"},
+    {name:"Keon Coleman", pos:"WR", team:"BUF"},
+    {name:"Justin Herbert", pos:"QB", team:"LAC"},
+    {name:"Justin Fields", pos:"QB", team:"NYJ"},
+    {name:"Mark Andrews", pos:"TE", team:"BAL"},
+    {name:"J.K. Dobbins", pos:"RB", team:"DEN"},
+    {name:"J.J. McCarthy", pos:"QB", team:"MIN"},
+    {name:"NY Giants Defense", pos:"DEF", team:"NYG"},
+    {name:"Keenan Allen", pos:"WR", team:"LAC"},
+    {name:"Jordan Love", pos:"QB", team:"GB"},
+    {name:"Denver Defense", pos:"DEF", team:"DEN"},
+    {name:"Evan Engram", pos:"TE", team:"DEN"},
+    {name:"Adam Thielen", pos:"WR", team:"CAR"},
+    {name:"Tyler Linderbaum", pos:"C", team:"BAL"},
+    {name:"Matt Ryan", pos:"QB", team:"ATL"},
+    {name:"Tyler Allgeier", pos:"RB", team:"ATL"},
+    {name:"Alex Smith", pos:"QB", team:"WAS"},
+  ];
+
+  // Auto fill rest with generic names
+  let adpList = [...USER_RANKINGS];
+  const POSITIONS = ['RB','WR','QB','TE'];
+  for(let i = adpList.length+1; i <= 220; i++){
+    adpList.push({name:`Player ${i}`, pos:POSITIONS[i%POSITIONS.length], team:"FA"});
+  }
+
+  // STATE
+  let available = [...adpList];
+  let teams = [];
+  let currentPickIndex = 0;
+  let running = false;
+  let waitingForUser = false;
+  let userPickResolve = null;
+  let countdownInterval = null;
+  let pickStartTime = 0;
+  let pickTimeout = USER_PICK_TIMEOUT_MS;
+
+  // DOM Elements
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const speedInput = document.getElementById('speed');
+  const searchInput = document.getElementById('search');
+  const boardContainer = document.getElementById('boardContainer');
+  const availableDiv = document.getElementById('available');
+  const logDiv = document.getElementById('log');
+  const roundNumSpan = document.getElementById('roundNum');
+  const pickNumSpan = document.getElementById('pickNum');
+  const timerDiv = document.getElementById('timer');
+  const statusDiv = document.getElementById('status');
+  const team3List = document.getElementById('team3');
+  const team10List = document.getElementById('team10');
+  const team3Count = document.getElementById('team3count');
+  const team10Count = document.getElementById('team10count');
+
+  // Init teams
+  function initTeams(){
+    teams = [];
+    for(let i=1;i<=TEAMS;i++){
+      teams.push({slot:i, roster:[]});
+    }
+  }
+
+  // Snake draft pick index from round and team
+  function pickIndexFromRoundTeam(round,team){
+    const r = round-1;
+    if(round%2===1){
+      return r*TEAMS+(team-1);
+    } else {
+      return r*TEAMS+(TEAMS-team);
+    }
+  }
+
+  // Draft pick at round/team
+  function draftPickAt(round,team){
+    return picks[pickIndexFromRoundTeam(round,team)];
+  }
+
+  // Next pick team from currentPickIndex
+  function nextPickTeamForIndex(idx){
+    const round = Math.floor(idx/TEAMS)+1;
+    const pickInRound = idx%TEAMS;
+    return (round%2===1) ? (pickInRound+1) : (TEAMS-pickInRound);
+  }
+
+  // Current round and pick
+  function currentRound(){
+    return Math.floor(currentPickIndex/TEAMS)+1;
+  }
+  function pickNumberInRound(){
+    return (currentPickIndex%TEAMS)+1;
+  }
+
+  // Log message with timestamp, max 100 lines
+  function log(msg){
+    const time = new Date().toLocaleTimeString();
+    logDiv.textContent = `${time} — ${msg}\n` + logDiv.textContent;
+    const lines = logDiv.textContent.split('\n').slice(0,100);
+    logDiv.textContent = lines.join('\n');
+  }
+
+  // Render draft board
+  function renderBoard(){
+    boardContainer.innerHTML = '';
+    boardContainer.style.setProperty('--rounds', ROUNDS);
+    for(let r=0;r<ROUNDS;r++){
+      const row = document.createElement('div');
+      row.className = 'board-row';
+      for(let t=1;t<=TEAMS;t++){
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        const pick = draftPickAt(r+1,t);
+        const teamEl = document.createElement('div');
+        teamEl.className = 'team';
+        teamEl.textContent = `#${t} • R${r+1}`;
+        slot.appendChild(teamEl);
+        if(pick){
+          const playerEl = document.createElement('div');
+          playerEl.className = 'player';
+          playerEl.textContent = `${pick.name} (${pick.pos}) — ${pick.team}`;
+          slot.appendChild(playerEl);
+        } else {
+          slot.classList.add('empty');
+        }
+        row.appendChild(slot);
+      }
+      boardContainer.appendChild(row);
+    }
+  }
+
+  // Render available players filtered
+  function renderAvailable(filterText=''){
+    availableDiv.innerHTML = '';
+    const text = filterText.trim().toLowerCase();
+    const list = available.filter(p=>!text||(`${p.name} ${p.pos} ${p.team}`).toLowerCase().includes(text));
+    list.slice(0,200).forEach(p=>{
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      const left = document.createElement('div');
+      left.innerHTML = `<div style="font-weight:700">${p.name}</div><div class="player-meta">${p.pos} • ${p.team}</div>`;
+      const right = document.createElement('div');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Pick';
+      btn.disabled = !waitingForUser;
+      btn.setAttribute('aria-disabled', btn.disabled);
+      btn.addEventListener('click', () => resolveUserPick(p));
+      right.appendChild(btn);
+      row.appendChild(left);
+      row.appendChild(right);
+      availableDiv.appendChild(row);
+    });
+  }
+
+  // Render user rosters
+  function renderRosters(){
+    team3List.innerHTML = '';
+    team10List.innerHTML = '';
+    const team3 = teams[2].roster;
+    const team10 = teams[9].roster;
+    team3.forEach(p=>{
+      const li = document.createElement('li');
+      li.textContent = `${p.name} (${p.pos}) — ${p.team}`;
+      team3List.appendChild(li);
+    });
+    team10.forEach(p=>{
+      const li = document.createElement('li');
+      li.textContent = `${p.name} (${p.pos}) — ${p.team}`;
+      team10List.appendChild(li);
+    });
+    team3Count.textContent = team3.length;
+    team10Count.textContent = team10.length;
+  }
+
+  // Pick player for team
+  function pickPlayerForTeam(teamSlot, player){
+    const idx = available.findIndex(p=>p.name === player.name && p.pos === player.pos && p.team === player.team);
+    if(idx === -1){
+      console.warn('Player not available:', player);
+      return false;
+    }
+    available.splice(idx,1);
+    const team = teams.find(t=>t.slot === teamSlot);
+    team.roster.push(player);
+    picks[currentPickIndex] = player;
+    log(`Team #${teamSlot} picks ${player.name} (${player.pos})`);
+    renderAvailable(searchInput.value);
+    renderRosters();
+    renderBoard();
+    return true;
+  }
+
+  // User picks a player
+  function resolveUserPick(player){
+    if(userPickResolve){
+      userPickResolve(player);
+      userPickResolve = null;
+    }
+  }
+
+  // Bot picks based on ADP (lowest available)
+  function botPick(teamSlot){
+    // Pick first available player
+    if(available.length === 0) return null;
+    const player = available[0];
+    pickPlayerForTeam(teamSlot, player);
+    return player;
+  }
+
+  // Timer update for user picks
+  function updateTimer(){
+    if(!running || !waitingForUser) {
+      timerDiv.textContent = 'Timer: --';
+      return;
+    }
+    const elapsed = Date.now() - pickStartTime;
+    const remaining = Math.max(0, Math.floor((pickTimeout - elapsed)/1000));
+    timerDiv.textContent = `Timer: ${remaining}s`;
+    if(remaining <= 0){
+      timerDiv.textContent = 'Timer: 0s (Auto-pick)';
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      if(userPickResolve){
+        // Auto-pick the top available player
+        userPickResolve(available[0]);
+        userPickResolve = null;
+      }
+    }
+  }
+
+  // Draft loop
+  async function draftTick(){
+    if(currentPickIndex >= TOTAL_PICKS){
+      running = false;
+      statusDiv.textContent = "Draft complete!";
+      timerDiv.textContent = "Timer: --";
+      pauseBtn.disabled = true;
+      startBtn.disabled = false;
+      resetBtn.disabled = false;
+      waitingForUser = false;
+      renderAvailable(searchInput.value);
+      return;
+    }
+
+    const teamSlot = nextPickTeamForIndex(currentPickIndex);
+    roundNumSpan.textContent = currentRound();
+    pickNumSpan.textContent = pickNumberInRound();
+
+    if(USER_SLOTS.includes(teamSlot)){
+      // User pick
+      waitingForUser = true;
+      statusDiv.textContent = `Your pick: Team #${teamSlot}`;
+      renderAvailable(searchInput.value);
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      resetBtn.disabled = false;
+
+      pickStartTime = Date.now();
+      countdownInterval = setInterval(updateTimer, 500);
+
+      // Wait for user to pick or timeout
+      const player = await new Promise(resolve => {
+        userPickResolve = resolve;
+      });
+
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      waitingForUser = false;
+      updateTimer();
+
+      pickPlayerForTeam(teamSlot, player);
+    } else {
+      // Bot pick
+      statusDiv.textContent = `Bot picking for Team #${teamSlot}...`;
+      pickPlayerForTeam(teamSlot, available[0]);
+      await new Promise(r => setTimeout(r, speedInput.value));
+    }
+
+    currentPickIndex++;
+    if(running) draftTick();
+  }
+
+  // START draft
+  function startDraft(){
+    if(running) return;
+    running = true;
+    pauseBtn.disabled = false;
+    resetBtn.disabled = false;
+    startBtn.disabled = true;
+    initTeams();
+    currentPickIndex = 0;
+    picks.length = 0;
+    available = [...adpList];
+    renderBoard();
+    renderAvailable(searchInput.value);
+    renderRosters();
+    statusDiv.textContent = "Draft started!";
+    draftTick();
+  }
+
+  // PAUSE draft
+  function pauseDraft(){
+    if(!running) return;
+    running = false;
+    pauseBtn.disabled = true;
+    startBtn.disabled = false;
+    statusDiv.textContent = "Draft paused";
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+    timerDiv.textContent = "Timer: --";
+  }
+
+  // RESET draft
+  function resetDraft(){
+    running = false;
+    waitingForUser = false;
+    currentPickIndex = 0;
+    picks.length = 0;
+    available = [...adpList];
+    initTeams();
+    renderBoard();
+    renderAvailable(searchInput.value);
+    renderRosters();
+    statusDiv.textContent = "Draft reset.";
+    timerDiv.textContent = "Timer: --";
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = true;
+  }
+
+  // Initialize
+  let picks = [];
+  initTeams();
+  renderBoard();
+  renderAvailable();
+  renderRosters();
+  pauseBtn.disabled = true;
+  resetBtn.disabled = true;
+
+  // Event listeners
+  startBtn.addEventListener('click', startDraft);
+  pauseBtn.addEventListener('click', pauseDraft);
+  resetBtn.addEventListener('click', resetDraft);
+  speedInput.addEventListener('input', ()=>{ /* no special action needed, just used in draftTick */ });
+  searchInput.addEventListener('input', ()=>renderAvailable(searchInput.value));
+
+  </script>
+</body>
+</html>
